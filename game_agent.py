@@ -6,7 +6,8 @@ augment the test suite with your own test cases to further test your code.
 You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
-import random
+from random import randint
+from sample_players import improved_score
 
 
 class Timeout(Exception):
@@ -38,7 +39,7 @@ def custom_score(game, player):
     """
 
     # TODO: finish this function!
-    raise NotImplementedError
+    return improved_score(game, player)
 
 
 class CustomPlayer:
@@ -124,19 +125,34 @@ class CustomPlayer:
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
 
+        if len(legal_moves) ==0:
+            return -1, -1
+
+        best_move = legal_moves[randint(0, len(legal_moves) - 1)]
+
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            pass
+
+            start_depth = 1 if self.iterative else self.search_depth
+            end_depth = (game.height * game.width) // 2 if self.iterative else self.search_depth + 1
+
+            if self.method == "minimax":
+                for depth in range(start_depth, end_depth):
+                    best_move = self.minimax(game, depth)[1]
+                return best_move
+            for depth in range(start_depth, end_depth):
+                best_move = self.alphabeta(game, 1)[1]
+                return best_move
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            pass
+            return best_move
 
         # Return the best move from the last completed search iteration
-        raise NotImplementedError
+        return best_move
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -172,8 +188,19 @@ class CustomPlayer:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        legalmoves = game.get_legal_moves(self) if maximizing_player else game.get_legal_moves()
+
+        #print(depth, legalmoves)
+
+        if(len(legalmoves) == 0):
+            return 0, (-1, -1)
+
+        scoresformoves = [(self.score(game.forecast_move(x), self) if depth == 1 else self.minimax(game.forecast_move(x), depth - 1, not maximizing_player)[0],x) for x in legalmoves]
+
+        if(maximizing_player):
+            return max(scoresformoves,key=lambda x:x[0])
+        else:
+            return min(scoresformoves, key=lambda x:x[0])
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
@@ -217,4 +244,28 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        raise NotImplementedError
+        legalmoves = game.get_legal_moves(self) if maximizing_player else game.get_legal_moves()
+
+        #print(depth, legalmoves)
+
+        if (len(legalmoves) == 0):
+            return 0, (-1, -1)
+
+        if maximizing_player:
+            v = (float("-inf"), (-1, -1))
+            for x in legalmoves:
+                z = (self.score(game.forecast_move(x), self) if depth == 1 else self.alphabeta(game.forecast_move(x), depth - 1, alpha, beta, not maximizing_player)[0], x)
+                v = max([v, z], key=lambda y: y[0])
+                alpha = max(alpha, v[0])
+                if beta <= alpha:
+                    break
+            return v
+        else:
+           v = (float("inf"), (-1, -1))
+           for x in legalmoves:
+               z = (self.score(game.forecast_move(x), self) if depth == 1 else self.alphabeta(game.forecast_move(x), depth - 1, alpha, beta, not maximizing_player)[0], x)
+               v = min([v,  z], key=lambda y: y[0])
+               beta = min(beta, v[0])
+               if beta <= alpha:
+                   break
+           return v
