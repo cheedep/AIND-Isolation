@@ -6,8 +6,8 @@ augment the test suite with your own test cases to further test your code.
 You must test your agent's strength against a set of agents with known
 relative strength using tournament.py and include the results in your report.
 """
+from math import sqrt
 from random import randint
-from sample_players import improved_score
 
 
 class Timeout(Exception):
@@ -37,10 +37,45 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
 
-    # TODO: finish this function!
-    return improved_score(game, player)
+    if game.is_loser(player):
+        return float("-inf")
+    if game.is_winner(player):
+        return float("inf")
 
+    return float(len(own_moves)/len(opp_moves))
+
+def custom_score1(game, player):
+    #Heuristic based only on own moves
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    if game.is_loser(player):
+        return float("-inf")
+    if game.is_winner(player):
+        return float("inf")
+    return float(len(own_moves))
+
+def custom_score2(game, player):
+    #Heuristic trying to follow the center and the opponent
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+
+    if game.is_loser(player):
+        return float("-inf")
+    if game.is_winner(player):
+        return float("inf")
+
+    c = game.width//2, game.height//2
+    p = game.get_player_location(player)
+
+    if c in game.get_blank_spaces():
+        dist = sqrt((c[0]-p[0])**2 + (c[1]-p[1])**2)
+    else:
+        p1 = game.get_player_location(game.get_opponent(player))
+        dist = sqrt((p1[0] - p[0])**2 + (p1[1]-p[1])**2)
+    return float(len(own_moves) - len(opp_moves) - dist)
 
 class CustomPlayer:
     """Game-playing agent that chooses a move using your evaluation function
@@ -128,7 +163,8 @@ class CustomPlayer:
         if len(legal_moves) ==0:
             return -1, -1
 
-        best_move = legal_moves[randint(0, len(legal_moves) - 1)]
+        center = (game.width - 1)//2, (game.height - 1)//2
+        best_move = center if center in legal_moves else legal_moves[randint(0, len(legal_moves) - 1)]
 
         try:
             # The search method call (alpha beta or minimax) should happen in
@@ -188,12 +224,12 @@ class CustomPlayer:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise Timeout()
 
-        legalmoves = game.get_legal_moves(self) if maximizing_player else game.get_legal_moves()
+        legalmoves = game.get_legal_moves(self) if maximizing_player else game.get_legal_moves(game.get_opponent(self))
 
         #print(depth, legalmoves)
 
         if(len(legalmoves) == 0):
-            return 0, (-1, -1)
+            return float("-inf") if maximizing_player else float("inf"), (-1, -1)
 
         scoresformoves = [(self.score(game.forecast_move(x), self) if depth == 1 else self.minimax(game.forecast_move(x), depth - 1, not maximizing_player)[0],x) for x in legalmoves]
 
@@ -244,12 +280,12 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        legalmoves = game.get_legal_moves(self) if maximizing_player else game.get_legal_moves()
+        legalmoves = game.get_legal_moves(self) if maximizing_player else game.get_legal_moves(game.get_opponent(self))
 
         #print(depth, legalmoves)
 
         if (len(legalmoves) == 0):
-            return 0, (-1, -1)
+            return float("-inf") if maximizing_player else float("inf"), (-1, -1)
 
         if maximizing_player:
             v = (float("-inf"), (-1, -1))

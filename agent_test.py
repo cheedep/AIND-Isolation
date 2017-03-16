@@ -243,6 +243,69 @@ class Project1Test(unittest.TestCase):
         self.assertIsInstance(game_agent.custom_score(game, player1), float,
             "The heuristic function should return a floating point")
 
+    @timeout(1)
+    def test_get_move_with_fixed_depth(self):
+        """ Test CustomPlayer.get_move interface with simple input """
+        h, w = 4, 4  # board size
+        test_depth = 2
+        starting_location = (0, 1)
+        adversary_location = (0, 0)  # top left corner
+        iterative_search = False
+        search_method = "minimax"
+        heuristic_pos = list()
+
+        def get_heuristic(heuristic_pos):
+            def heuristic(g, p):
+                heuristic_pos.append(g.get_player_location(p))
+                return 0.
+
+            return heuristic
+
+        # create a player agent & a game board
+        agentUT = game_agent.CustomPlayer(
+            test_depth, get_heuristic(heuristic_pos), iterative_search, search_method)
+
+        # Test that get_move returns a legal choice on an empty game board
+        board = isolation.Board(agentUT, 'null_agent', w, h)
+        board.apply_move(starting_location)
+        board.apply_move(adversary_location)
+        legal_moves = board.get_legal_moves()
+        agentUT.get_move(board, legal_moves, lambda: 99)
+        depth_one_and_two_nodes = [(1, 3), (1, 3), (2, 0), (2, 0), (2, 2), (2, 2)]
+        self.assertEqual(heuristic_pos, depth_one_and_two_nodes, 'Wrong nodes visited')
+
+    @timeout(1)
+    def test_get_move_with_variable_depth(self):
+        """ Test CustomPlayer.get_move interface with simple input """
+        h, w = 4, 4  # board size
+        test_depth = 2
+        starting_location = (0, 1)
+        adversary_location = (0, 0)  # top left corner
+        iterative_search = True
+        search_method = "minimax"
+        heuristic_pos = list()
+
+        def get_heuristic(heuristic_pos):
+            def heuristic(g, p):
+                if len(heuristic_pos) == 9:
+                    raise game_agent.Timeout()
+                heuristic_pos.append(g.get_player_location(p))
+                return 0.
+
+            return heuristic
+
+        # create a player agent & a game board
+        agentUT = game_agent.CustomPlayer(
+            test_depth, get_heuristic(heuristic_pos), iterative_search, search_method)
+
+        # Test that get_move returns a legal choice on an empty game board
+        board = isolation.Board(agentUT, 'null_agent', w, h)
+        board.apply_move(starting_location)
+        board.apply_move(adversary_location)
+        agentUT.get_move(board, board.get_legal_moves(), lambda: 99)
+        depth_one_and_two_nodes = [(1, 3), (2, 0), (2, 2), (1, 3), (1, 3), (2, 0), (2, 0), (2, 2), (2, 2)]
+        self.assertEqual(heuristic_pos, depth_one_and_two_nodes, 'Wrong nodes visited')
+
     timeout(5)
     # @unittest.skip("Skip simple minimax test.")  # Uncomment this line to skip test
     def test_minimax_interface(self):
